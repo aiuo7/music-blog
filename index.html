@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>歌曲只是摆设</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lobster&family=Pacifico&family=Dancing+Script:wght@400;700&family=Cinzel:wght@400;700&family=Bebas+Neue&family=Great+Vibes&family=Anton&family=Caveat:wght@400;700&family=Press+Start+2P&family=ZCOOL+KuaiLe&family=ZCOOL+XiaoWei&family=Ma+Shan+Zheng&family=Long+Cang&family=Liu+Jian+Mao+Cao&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles-base.css?v=20260808v6">
+<link rel="stylesheet" href="css/styles-music.css?v=20260808v4">
+</head>
+<body>
+
+<!-- 全局加载动效（云端设置加载完成前显示，禁止展示占位字段填充） -->
+<div class="page-loader" id="pageLoader">
+  <div class="page-loader-spinner"></div>
+  <div class="page-loader-text">加载中...</div>
+</div>
+
+<!-- 疯狂动物城3D动态背景（底层） -->
+<canvas id="bgSceneCanvas"></canvas>
+
+<!-- 深空星空粒子背景（底层） -->
+<canvas id="starfieldCanvas" class="starfield-canvas"></canvas>
+
+<!-- 自定义背景层 -->
+<div id="bgLayer" class="bg-layer"></div>
+<video id="bgVideo" class="bg-video" autoplay muted loop playsinline style="display:none"></video>
+
+<!-- 全页背景轮播（电影放映带） -->
+<div class="bg-carousel" id="bgCarousel">
+  <div class="bg-carousel-strip" id="bgCarouselStrip"></div>
+</div>
+
+<!-- 天气特效画布层 -->
+<canvas id="weatherCanvas"></canvas>
+
+<!-- 3D环境粒子特效层（Three.js WebGL，全屏透明覆盖） -->
+<canvas id="ambientCanvas"></canvas>
+
+<!-- 歌词雨容器（置于背景层之上、主内容层之下，不遮挡头像） -->
+<div class="lyrics-rain" id="lyricsRain"></div>
+
+<!-- 主页面（直接显示，无需登录） -->
+<div id="mainPage" class="main-page">
+
+  <!-- 左上角时间+天气合并组件（Apple风格） -->
+  <div class="weather-widget" id="weatherWidget">
+    <div class="weather-card" id="weatherCard">
+      <div class="weather-card-top">
+        <div class="weather-eye" id="weatherEye" title="天气开关">
+          <svg viewBox="0 0 24 24" class="eye-icon eye-open"><path d="M12 4.5C7 4.5 2.7 7.6 1 12c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5C21.3 7.6 17 4.5 12 4.5zm0 12.5a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+          <svg viewBox="0 0 24 24" class="eye-icon eye-closed"><path d="M12 7c2.8 0 5.3 1.1 7 3 .3-.6.5-1.3.6-2C17.7 6 15 5 12 5S6.3 6 2.4 8c.1.7.3 1.4.6 2 1.7-1.9 4.2-3 7-3zm6.3 3.9c.2.4.4.8.5 1.2-1.6 1.2-3.7 2.3-5.8 2.7.2.6.3 1.2.3 1.9 3.5-.9 6.5-3 8.4-5.7-.2-.6-.5-1.1-.8-1.7-.9.6-1.8 1.1-2.6 1.6zM12 17c-2.8 0-5.3-1.1-7-3-.3.6-.5 1.3-.6 2C6.3 18 9 19 12 19s5.7-1 8.4-2.9c-.1-.7-.3-1.4-.6-2-1.7 1.9-4.2 2.9-7 2.9z"/></svg>
+        </div>
+      </div>
+      <div class="weather-card-body" id="weatherInfo">
+        <div class="ios-time-widget">
+          <div class="ios-time-row">
+            <span class="ios-time-hour" id="clockTime">00:00</span>
+            <span class="ios-time-seconds" id="clockSeconds">00</span>
+          </div>
+          <div class="ios-date-row" id="clockDate">--</div>
+          <div class="ios-weather-row">
+            <span class="ios-weather-icon" id="weatherIcon">☀️</span>
+            <span class="ios-weather-temp" id="weatherTemp">22°</span>
+            <span class="ios-weather-sep">·</span>
+            <span class="ios-weather-cond" id="weatherCondition">晴天</span>
+          </div>
+          <div class="ios-extra-row">
+            <span id="weatherRegion">北京</span>
+            <span class="ios-weather-sep">·</span>
+            <span id="weatherAqi">空气优</span>
+            <span class="ios-weather-sep">·</span>
+            <span id="weatherHumidity">湿度 60%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右上角设置中心 -->
+  <div class="settings-trigger" id="settingsTrigger" title="设置中心">
+    <svg viewBox="0 0 24 24" class="gear-icon"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94 0 .31.04.64.09.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.21.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+  </div>
+
+  <!-- 设置面板 -->
+  <div class="settings-panel glass" id="settingsPanel">
+    <div class="settings-header">
+      <span>设置中心</span>
+      <button class="settings-close" id="settingsClose">✕</button>
+    </div>
+    <div class="settings-body" id="settingsBody">
+      <!-- 动态生成 -->
+    </div>
+    <div class="settings-footer">
+      <button class="settings-save-btn" id="settingsSave">保存设置</button>
+      <button class="settings-logout-btn" id="settingsReset">重置默认</button>
+    </div>
+  </div>
+
+  <!-- 头像区域（居于页面中上方） -->
+  <div class="avatar-section" id="avatarSection">
+    <div class="avatar-container" id="avatarContainer">
+      <div class="avatar-frame" id="avatarFrame">
+        <div class="avatar-glass-ring" id="avatarGlassRing"></div>
+        <img class="avatar-img" id="avatarImg" src="" alt="">
+        <div class="avatar-custom-frame-overlay" id="avatarCustomFrame"></div>
+        <div class="avatar-plus" id="avatarPlus">
+          <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- 昵称 -->
+    <div class="nickname" id="nickname">未设置昵称</div>
+
+    <!-- 个性签名 -->
+    <div class="signature" id="signature">在这里写下你的个性签名</div>
+  </div>
+
+  <!-- 头像裁剪弹窗 -->
+  <div class="crop-modal" id="cropModal">
+    <div class="crop-box">
+      <h3>裁剪头像</h3>
+      <div class="crop-area">
+        <canvas id="cropCanvas" width="300" height="300"></canvas>
+      </div>
+      <div class="crop-controls">
+        <button class="crop-btn" id="cropCancel">取消</button>
+        <button class="crop-btn crop-confirm" id="cropConfirm">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 音乐播放器（底部全宽播放条） -->
+  <div class="music-player" id="musicPlayer">
+    <div class="music-player-glass">
+      <!-- 左侧：专辑封面 -->
+      <div class="music-album" id="musicAlbum">
+        <img class="music-album-img" id="vinylCover" src="" alt="">
+        <div class="music-album-note">♪</div>
+      </div>
+      <!-- 中间：曲目信息 + 控制 + 进度 -->
+      <div class="music-center">
+        <div class="music-track-row">
+          <span class="music-track-name" id="musicTitle">未导入音乐</span>
+          <span class="music-hq-badge">HQ</span>
+        </div>
+        <div class="music-lyrics-line" id="musicLyricsLine"></div>
+        <div class="music-controls">
+          <button class="music-btn" id="musicPrev" title="上一首 (Ctrl+←)">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+          </button>
+          <button class="music-btn music-play-btn" id="musicPlay" title="播放/暂停 (空格)">
+            <svg id="playIcon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          <button class="music-btn" id="musicNext" title="下一首 (Ctrl+→)">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M16 6h2v12h-2zM6 6l8.5 6L6 18z"/></svg>
+          </button>
+          <button class="music-btn music-mode-btn" id="musicMode" title="播放模式 (R)">↻</button>
+          <button class="music-btn music-speed-btn" id="musicSpeed" title="倍速 (S)">1.0x</button>
+        </div>
+        <div class="music-progress-row">
+          <span class="music-time" id="musicCurrentTime">00:00</span>
+          <div class="music-progress" id="musicProgressContainer">
+            <div class="music-progress-bar" id="musicProgressBar"></div>
+            <div class="music-progress-thumb" id="musicProgressThumb"></div>
+          </div>
+          <span class="music-time" id="musicDuration">00:00</span>
+        </div>
+      </div>
+      <!-- 右侧：黑胶唱片 + 歌词 + 列表 -->
+      <div class="music-right">
+        <div class="vinyl-record-wrapper" id="vinylWrapper">
+          <div class="vinyl-record" id="vinylRecord">
+            <div class="vinyl-grooves"></div>
+            <div class="vinyl-label" id="vinylLabel">
+              <div class="vinyl-center-hole"></div>
+            </div>
+          </div>
+          <div class="vinyl-tonearm" id="vinylTonearm"></div>
+        </div>
+        <div class="music-right-btns">
+          <button class="music-btn music-search-btn" id="musicSearchTrigger" title="搜索音乐 (F)">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7.5"/><line x1="16.5" y1="16.5" x2="19.5" y2="19.5"/></svg>
+          </button>
+          <button class="music-btn music-lyrics-btn" id="musicLyricsToggle" title="歌词雨 (K)">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          </button>
+          <button class="music-btn music-playlist-btn" id="musicPlaylistToggle" title="播放列表 (L)">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h13M3 12h13M3 18h9M17 14v6M20 17h-6"/></svg>
+          </button>
+          <button class="music-btn music-favorite-btn" id="musicFavoriteBtn" title="收藏到歌单">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+          </button>
+          <div class="music-volume-wrap" id="musicVolumeWrap">
+            <button class="music-btn music-volume-btn" id="musicVolumeBtn" title="音量 (Ctrl+↑/↓)  静音 (M)">
+              <svg class="vol-icon-on" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+              <svg class="vol-icon-off" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+            </button>
+            <div class="music-volume-slider" id="musicVolumeSliderWrap">
+              <input type="range" id="musicVolumeSlider" min="0" max="100" value="80" title="音量">
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 动态音波可视化（背景层） -->
+      <div class="music-visualizer" id="musicVisualizer">
+        <canvas id="visualizerCanvas"></canvas>
+      </div>
+      <!-- 底部心跳律动特效 -->
+      <canvas class="music-heartbeat" id="musicHeartbeat"></canvas>
+    </div>
+    <input type="file" id="musicFileInput" accept="audio/*" multiple style="display:none">
+  </div>
+
+  <!-- 音乐搜索浮层（播放器右侧上方弹出） -->
+  <div class="music-search-panel glass" id="musicSearchPanel">
+    <div class="playlist-panel-header">
+      <span class="playlist-panel-title">在线搜索 · 网易云/酷我音乐</span>
+      <button class="playlist-panel-close" id="musicSearchPanelClose">✕</button>
+    </div>
+    <div class="music-search-box">
+      <input type="text" class="music-search-input" id="musicSearchInput" placeholder="搜索歌曲名或歌手..." autocomplete="off">
+      <button class="music-search-btn" id="musicSearchGo">搜索</button>
+    </div>
+    <div class="music-search-results" id="musicSearchResults"></div>
+    <div class="music-search-hint">在线搜索 · 完整播放 · VIP 已过滤 · 不写入存储</div>
+  </div>
+
+  <!-- 播放列表面板（弹出浮层） -->
+  <div class="music-playlist-panel glass" id="musicPlaylistPanel">
+    <div class="playlist-panel-header">
+      <span class="playlist-panel-title">播放列表</span>
+      <div class="playlist-panel-actions">
+        <button class="playlist-panel-btn" id="playlistClearBtn" title="清空列表">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+          <span>清空</span>
+        </button>
+        <button class="playlist-panel-btn" id="playlistAddFavBtn" title="存为收藏歌单">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+          <span>存为歌单</span>
+        </button>
+        <button class="playlist-panel-btn" id="playlistViewFavBtn" title="查看收藏歌单">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+          <span>收藏夹</span>
+        </button>
+        <button class="playlist-panel-close" id="playlistPanelClose">✕</button>
+      </div>
+    </div>
+    <div class="playlist-panel-body" id="playlistPanelBody"></div>
+  </div>
+
+  <!-- 收藏歌单面板 -->
+  <div class="music-favorites-panel glass" id="musicFavoritesPanel">
+    <div class="playlist-panel-header">
+      <span class="playlist-panel-title">收藏歌单</span>
+      <div class="playlist-panel-actions">
+        <button class="playlist-panel-close" id="favoritesPanelClose">✕</button>
+      </div>
+    </div>
+    <div class="playlist-panel-body" id="favoritesPanelBody"></div>
+  </div>
+
+  <!-- Toast 提示 -->
+  <div class="toast" id="toast"></div>
+
+<!-- Supabase SDK（云端存储，需在 config.js 之前加载） -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Three.js 3D 特效引擎 -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="js/three-effects.js?v=20260805v14"></script>
+<script src="js/zootopia-bg.js?v=20260803v2"></script>
+  <script src="js/config.js?v=20260807v4"></script>
+<script src="js/app-core.js?v=20260808v1"></script>
+<script src="js/app-settings.js?v=20260808v6"></script>
+<script src="js/app-effects.js?v=20260807v5"></script>
+<script src="js/app-music.js?v=20260808v3"></script>
+<script src="js/app-search.js?v=20260808v4"></script>
+</body>
+</html>
