@@ -65,7 +65,7 @@ window.PUBLIC_CONFIG = {
     // 前端调用 /api/search /api/audio /api/lyrics，需对应服务器已部署聚合端点
     // 例：'http://127.0.0.1:9123' （路径前缀如 /api/netease-music 会被忽略，仅用 origin）
     // 留空 '' 则关闭在线搜索
-    apiBase: 'https://catserver.fengzhengx.cn/api/netease-music',
+    apiBase: '',
     tracks: [
       // 你的音乐文件已放到 assets/music/ 里
       { name: 'Back to You', artist: 'VØRTEX', src: 'assets/music/back-to-you.mp3', cover: '' },

@@ -25,8 +25,9 @@ function getNeteaseApiBase() {
 // 跨域场景下（页面在 8080、API 在 8094）必须用绝对路径，否则相对路径会走页面所在端口
 function getNeteaseOrigin() {
   const base = getNeteaseApiBase();
-  if (!base) return '';
-  try { return new URL(base).origin; } catch (e) { return ''; }
+  // 如果 apiBase 为空，使用当前页面所在的 origin（同域部署）
+  if (!base) return window.location.origin;
+  try { return new URL(base).origin; } catch (e) { return window.location.origin; }
 }
 
 // 把相对路径补全为绝对路径（指向 API 服务器）
