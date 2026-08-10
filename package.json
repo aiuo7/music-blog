@@ -1,5 +1,8 @@
 {
   "name": "music-blog",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  }
 }
